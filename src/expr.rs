@@ -1,6 +1,6 @@
 use rand::{self, Rng};
 
-enum BinaryOp {
+pub enum BinaryOp {
     Add,
     Sub,
     Mul,
@@ -8,7 +8,7 @@ enum BinaryOp {
     Pow,
 }
 
-enum UnaryOp {
+pub enum UnaryOp {
     Neg,
 
     // Built-in functioins
@@ -21,7 +21,7 @@ enum UnaryOp {
     Tan,
 }
 
-struct BinOp {
+pub struct BinOp {
     op: BinaryOp,
 
     // pointres (via Vec index)
@@ -30,14 +30,14 @@ struct BinOp {
     b: usize,
 }
 
-struct UnOp {
-    op: UnaryOp,
+pub struct UnOp {
+    pub op: UnaryOp,
     // pointer (via Vec index)
     // to child node.
     a: usize,
 }
 
-enum Node {
+pub enum Node {
     Number(f64),
 
     //Index to the variables Vec
@@ -51,8 +51,8 @@ pub struct Expr {
     // Using vec as an arena style
     // allocator and indecies as
     // easy to work with pointers.
-    nodes: Vec<Node>,
-    root: usize,
+    pub nodes: Vec<Node>,
+    pub root: usize,
 }
 
 impl Expr {

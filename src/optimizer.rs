@@ -1,4 +1,9 @@
-use crate::{dataloader::DataLoader, expr::Expr, metrics::mse, vec2d::Vec2d};
+use crate::{
+    dataloader::DataLoader,
+    expr::Expr,
+    metrics::{mse, regularize},
+    vec2d::Vec2d,
+};
 
 pub fn naive_montecarlo(iterations: usize, data_loader: DataLoader) -> (f64, Expr) {
     let data = data_loader.vec2d();
@@ -20,10 +25,8 @@ pub fn naive_montecarlo(iterations: usize, data_loader: DataLoader) -> (f64, Exp
         x.push_slice(&x_row);
 
         let y_row = match row[cols - 1] {
-            "Iris-setosa" => 0.0,
-            "Iris-versicolor" => 1.0,
-            "Iris-virginica" => 2.0,
-            _ => unreachable!(),
+            "Iris-setosa" => 1.0,
+            _ => 0.0,
         };
 
         y.push(y_row);
@@ -43,7 +46,7 @@ pub fn naive_montecarlo(iterations: usize, data_loader: DataLoader) -> (f64, Exp
         let mut trues = Vec::new();
 
         let mut expr = Expr::new();
-        expr.random_tree(2, cols - 1);
+        expr.random_tree(10, cols - 1);
 
         for ii in 0..rows - 2 {
             let x_row = x.get_row(ii).unwrap();
@@ -60,7 +63,7 @@ pub fn naive_montecarlo(iterations: usize, data_loader: DataLoader) -> (f64, Exp
             trues.push(y_row);
         }
 
-        let loss = mse(&preds, &trues);
+        let loss = mse(&preds, &trues) + regularize(&expr, 0.001);
 
         if loss < best_loss {
             best_loss = loss;
