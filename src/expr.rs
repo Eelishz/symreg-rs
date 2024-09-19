@@ -52,19 +52,27 @@ pub struct Expr {
     // allocator and indecies as
     // easy to work with pointers.
     nodes: Vec<Node>,
+    root: usize,
 }
 
 impl Expr {
     pub fn new() -> Expr {
-        Expr { nodes: Vec::new() }
+        Expr {
+            nodes: Vec::new(),
+            root: 0,
+        }
     }
 
-    pub fn evaluate(&self, node: usize, inputs: &Vec<f64>) -> f64 {
+    pub fn evaluate(&self, inputs: &Vec<f64>) -> f64 {
+        self.eval(self.root, inputs)
+    }
+
+    fn eval(&self, node: usize, inputs: &Vec<f64>) -> f64 {
         match &self.nodes[node] {
             Node::Number(x) => *x,
             Node::Variable(ptr) => inputs[*ptr],
             Node::UnOp(op) => {
-                let x = self.evaluate(op.a, inputs);
+                let x = self.eval(op.a, inputs);
 
                 match op.op {
                     UnaryOp::Neg => -x,
@@ -78,8 +86,8 @@ impl Expr {
                 }
             }
             Node::BinOp(op) => {
-                let a = self.evaluate(op.a, inputs);
-                let b = self.evaluate(op.b, inputs);
+                let a = self.eval(op.a, inputs);
+                let b = self.eval(op.b, inputs);
 
                 match op.op {
                     BinaryOp::Add => a + b,
@@ -92,12 +100,16 @@ impl Expr {
         }
     }
 
-    pub fn generate_tree(&mut self, max_depth: usize, n_inputs: usize) -> usize {
+    pub fn random_tree(&mut self, max_depth: usize, n_inputs: usize) {
+        self.root = self.generate_tree(max_depth, n_inputs);
+    }
+
+    fn generate_tree(&mut self, max_depth: usize, n_inputs: usize) -> usize {
         let node = if max_depth == 0 || rand::random::<f64>() < 0.15 {
             if rand::random::<bool>() && n_inputs != 0 {
                 Node::Variable(rand::random::<usize>() % n_inputs)
             } else {
-                let x = rand::random::<f64>() * 100.0 - 50.0;
+                let x = rand::random::<f64>() * 10.0 - 5.0;
                 Node::Number(x)
             }
         } else {
@@ -128,7 +140,11 @@ impl Expr {
         self.nodes.len() - 1
     }
 
-    pub fn generate_rpn(&self, node: usize) -> String {
+    pub fn rpn(&self) -> String {
+        self.generate_rpn(self.root)
+    }
+
+    fn generate_rpn(&self, node: usize) -> String {
         match &self.nodes[node] {
             Node::Number(x) => format!("{x:0.2}"),
             Node::Variable(ptr) => format!("${ptr}"),

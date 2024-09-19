@@ -1,8 +1,9 @@
 use std::fs;
 
-pub struct DataLoader {
-    path: String,
+use crate::vec2d::Vec2d;
 
+#[derive(Debug, Clone)]
+pub struct DataLoader {
     // For larger datasets, data
     // may be streamed directly
     // from disk, instead of being
@@ -12,51 +13,83 @@ pub struct DataLoader {
     // example using the `BufReader`
     // type.
     data: String,
-    read_ptr: usize,
 }
 
 impl DataLoader {
     pub fn new(path: &str) -> std::io::Result<DataLoader> {
         let data = fs::read_to_string(path)?;
 
-        Ok(DataLoader {
-            path: path.to_string(),
-            data,
-            read_ptr: 0,
-        })
+        Ok(DataLoader { data })
     }
 
-    pub fn pop_row(&mut self) -> Option<Vec<&str>> {
-        let i = &mut self.read_ptr;
-        let mut prev_break = *i;
+    fn read_row(&self, read_position: usize) -> Option<(Vec<&str>, usize)> {
+        let mut i = read_position;
+        let mut prev_break = i;
 
         let mut res = Vec::new();
 
         loop {
-            let c = self.data.as_bytes().get(*i)?;
+            let c = self.data.as_bytes().get(i)?;
 
             match c {
                 b'\n' => {
-                    res.push(&self.data[prev_break..*i]);
-                    *i += 1;
+                    res.push(&self.data[prev_break..i]);
+                    i += 1;
                     break;
                 }
                 b'\r' => {
-                    res.push(&self.data[prev_break..*i]);
+                    res.push(&self.data[prev_break..i]);
 
                     // Double increment for CRLF line breaks
-                    *i += 2;
+                    i += 2;
                     break;
                 }
                 b',' => {
-                    res.push(&self.data[prev_break..*i]);
-                    prev_break = *i + 1; // Don't include comma
+                    res.push(&self.data[prev_break..i]);
+                    prev_break = i + 1; // Don't include comma
                 }
                 _ => (),
             }
 
-            *i += 1;
+            i += 1;
         }
-        Some(res)
+        Some((res, i))
+    }
+
+    pub fn columns(&self) -> usize {
+        let mut i = 0;
+        let mut n_cols = 1;
+
+        loop {
+            if let Some(c) = self.data.as_bytes().get(i) {
+                match c {
+                    b'\n' => {
+                        break;
+                    }
+                    b',' => {
+                        n_cols += 1;
+                    }
+                    _ => (),
+                }
+
+                i += 1;
+            } else {
+                break;
+            }
+        }
+        n_cols
+    }
+
+    pub fn vec2d(&self) -> Vec2d<&str> {
+        let cols = self.columns();
+        let mut res = Vec2d::new(cols);
+        let mut read_position = 0;
+
+        while let Some((row, i)) = self.read_row(read_position) {
+            res.push_slice(row.as_slice());
+            read_position = i;
+        }
+
+        res
     }
 }

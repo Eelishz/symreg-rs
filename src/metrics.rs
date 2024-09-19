@@ -1,4 +1,4 @@
-pub fn mae(y_pred: Vec<f64>, y_true: Vec<f64>) -> f64 {
+pub fn mae(y_pred: &Vec<f64>, y_true: &Vec<f64>) -> f64 {
     assert_eq!(y_pred.len(), y_true.len());
 
     y_pred
@@ -9,7 +9,7 @@ pub fn mae(y_pred: Vec<f64>, y_true: Vec<f64>) -> f64 {
         / y_pred.len() as f64
 }
 
-pub fn mse(y_pred: Vec<f64>, y_true: Vec<f64>) -> f64 {
+pub fn mse(y_pred: &Vec<f64>, y_true: &Vec<f64>) -> f64 {
     assert_eq!(y_pred.len(), y_true.len());
 
     y_pred
