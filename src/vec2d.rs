@@ -1,5 +1,5 @@
 #[derive(Debug, Clone)]
-struct Iter<T> {
+pub struct Iter<T> {
     container: Vec2d<T>,
     pos: usize,
 }
@@ -13,7 +13,9 @@ impl<T> Iter<T> {
 impl<T: Copy> Iterator for Iter<T> {
     type Item = Vec<T>;
     fn next(&mut self) -> Option<Self::Item> {
-        Some(Vec::from(self.container.get_row(0)?))
+        let item = Some(Vec::from(self.container.get_row(0)?));
+        self.pos += 1;
+        item
     }
 }
 
