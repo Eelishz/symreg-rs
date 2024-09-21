@@ -22,7 +22,7 @@ pub enum UnaryOp {
 }
 
 pub struct BinOp {
-    op: BinaryOp,
+    pub op: BinaryOp,
 
     // pointres (via Vec index)
     // to child nodes
@@ -152,7 +152,7 @@ impl Expr {
                 let x = self.generate_rpn(op.a);
 
                 let op = match op.op {
-                    UnaryOp::Neg => "-".to_string(),
+                    UnaryOp::Neg => "neg".to_string(),
                     UnaryOp::Abs => "abs".to_string(),
                     UnaryOp::Loge => "ln".to_string(),
                     UnaryOp::Log2 => "log2".to_string(),

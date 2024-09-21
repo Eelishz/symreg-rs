@@ -1,4 +1,4 @@
-use crate::expr::{Expr, Node, UnaryOp};
+use crate::expr::{Expr, Node, UnaryOp, BinaryOp};
 
 pub fn mae(y_pred: &Vec<f64>, y_true: &Vec<f64>) -> f64 {
     assert_eq!(y_pred.len(), y_true.len());
@@ -35,7 +35,13 @@ pub fn regularize(model: &Expr, alpha: f64) -> f64 {
                     UnaryOp::Abs => 2.0,
                     _ => 5.0,
                 },
-                Node::BinOp(_) => 3.0,
+                Node::BinOp(op) => match op.op {
+                    BinaryOp::Add => 1.0,
+                    BinaryOp::Sub => 1.0,
+                    BinaryOp::Mul => 2.0,
+                    BinaryOp::Div => 2.0,
+                    BinaryOp::Pow => 3.0,
+                },
             })
             .sum::<f64>()
 }

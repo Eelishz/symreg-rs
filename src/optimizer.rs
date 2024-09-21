@@ -63,7 +63,7 @@ pub fn naive_montecarlo(iterations: usize, data_loader: DataLoader) -> (f64, Exp
             trues.push(y_row);
         }
 
-        let loss = mse(&preds, &trues) + regularize(&expr, 0.001);
+        let loss = mse(&preds, &trues) + regularize(&expr, 0.005);
 
         if loss < best_loss {
             best_loss = loss;
