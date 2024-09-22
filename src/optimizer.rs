@@ -5,35 +5,11 @@ use crate::{
     vec2d::Vec2d,
 };
 
-pub fn naive_montecarlo(iterations: usize, data_loader: DataLoader) -> (f64, Expr) {
-    let data = data_loader.vec2d();
-
-    let (rows, cols) = data.shape();
-
-    let mut x: Vec2d<f64> = Vec2d::new(cols - 1);
-    let mut y: Vec<f64> = Vec::new();
-
-    //TODO: rework hard coding.
-
-    for i in 1..rows - 1 {
-        let row = Vec::from(data.get_row(i).unwrap());
-        let x_row: Vec<f64> = row[0..cols - 1]
-            .iter()
-            .map(|e| e.parse::<f64>().unwrap())
-            .collect();
-        assert_eq!(x_row.len(), x.shape().1);
-        x.push_slice(&x_row);
-
-        let y_row = match row[cols - 1] {
-            "Iris-setosa" => 1.0,
-            _ => 0.0,
-        };
-
-        y.push(y_row);
-    }
-
+pub fn naive_montecarlo(iterations: usize, x: Vec2d<f64>, y: Vec<f64>) -> (f64, Expr) {
     let mut best_loss = f64::INFINITY;
     let mut best_expr = Expr::new();
+
+    let (rows, cols) = x.shape();
 
     'outer: for i in 0..iterations {
         let step = iterations / 10;
@@ -46,7 +22,7 @@ pub fn naive_montecarlo(iterations: usize, data_loader: DataLoader) -> (f64, Exp
         let mut trues = Vec::new();
 
         let mut expr = Expr::new();
-        expr.random_tree(10, cols - 1);
+        expr.random_tree(10, cols);
 
         for ii in 0..rows - 2 {
             let x_row = x.get_row(ii).unwrap();
