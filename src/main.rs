@@ -4,10 +4,12 @@ mod metrics;
 mod optimizer;
 mod vec2d;
 
-use optimizer::naive_montecarlo;
 use vec2d::categorize_cols;
 
-use crate::dataloader::DataLoader;
+use crate::{
+    dataloader::DataLoader,
+    optimizer::{genetic_optimizer, GeneticParameters},
+};
 
 fn main() {
     let data_loader = DataLoader::new("data/weatherAUS.csv").unwrap();
@@ -16,16 +18,15 @@ fn main() {
     let (_date, data) = data.split_left();
     let data = categorize_cols(data);
     let (x, y) = data.split_right();
-    x.print_head();
-    println!("{:#?}", &y[0..10]);
 
-    let (_loss, _tree) = naive_montecarlo(10_000_000, x, y);
+    let (_loss, _tree) = genetic_optimizer(100, x, y, &GeneticParameters::default());
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::vec2d::Vec2d;
+    use optimizer::naive_montecarlo;
 
     #[test]
     fn iris() {
