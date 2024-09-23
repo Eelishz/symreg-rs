@@ -12,14 +12,17 @@ use crate::{
 };
 
 fn main() {
-    let data_loader = DataLoader::new("data/weatherAUS.csv").unwrap();
+    let data_loader = DataLoader::new("data/IRIS.csv").unwrap();
     let mut data = data_loader.vec2d();
     let _header = data.pop_head();
-    let (_date, data) = data.split_left();
     let data = categorize_cols(data);
     let (x, y) = data.split_right();
-
-    let (_loss, _tree) = genetic_optimizer(100, x, y, &GeneticParameters::default());
+    let params = GeneticParameters {
+        population_size: 1_000_000,
+        cutoff: 0.1,
+        mutation_rate: 0.1,
+    };
+    let (_loss, _tree) = genetic_optimizer(100, x, y, &params);
 }
 
 #[cfg(test)]

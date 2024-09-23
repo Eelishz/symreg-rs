@@ -53,9 +53,9 @@ pub fn naive_montecarlo(iterations: usize, x: Vec2d<f64>, y: Vec<f64>) -> (f64, 
 }
 
 pub struct GeneticParameters {
-    population_size: usize,
-    cutoff: f64,
-    mutation_rate: f64,
+    pub population_size: usize,
+    pub cutoff: f64,
+    pub mutation_rate: f64,
 }
 
 impl GeneticParameters {
@@ -115,7 +115,7 @@ pub fn genetic_optimizer(
 
         population.sort_by(|a, b| a.loss.total_cmp(&b.loss));
         println!(
-            "Generation {}, best loss: {:0.2}, best expr: {}",
+            "Generation {}, best loss: {:0.4}, best expr: {}",
             generation + 1,
             population[0].loss,
             population[0].expr.rpn(),
