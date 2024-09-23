@@ -1,5 +1,6 @@
-use indicatif::ProgressIterator;
+use indicatif::ParallelProgressIterator;
 use rand::Rng;
+use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
 
 use crate::{
     expr::Expr,
@@ -76,8 +77,8 @@ struct Individual {
 
 pub fn genetic_optimizer(
     iterations: usize,
-    x: Vec2d<f64>,
-    y: Vec<f64>,
+    x: &Vec2d<f64>,
+    y: &Vec<f64>,
     params: &GeneticParameters,
 ) -> (f64, Expr) {
     let (rows, cols) = x.shape();
@@ -91,11 +92,11 @@ pub fn genetic_optimizer(
     let n_selected = (population.len() as f64 * params.cutoff) as usize;
     assert_ne!(n_selected, 0);
     for e in &mut population {
-        e.expr.random_tree(2);
+        e.expr.random_tree(0);
     }
 
     for generation in 0..iterations {
-        for individual in population.iter_mut().progress() {
+        population.par_iter_mut().progress().for_each(|individual| {
             let mut preds = Vec::new();
             let mut trues = Vec::new();
 
@@ -104,14 +105,18 @@ pub fn genetic_optimizer(
                 let y_row = y[i_row];
 
                 let result = individual.expr.evaluate(x_row);
+                let result = if result.is_nan() {
+                    f64::INFINITY
+                } else {
+                    result
+                };
                 preds.push(result);
                 trues.push(y_row);
             }
 
-            let loss = mse(&preds, &trues) + regularize(&individual.expr, 0.0001);
-            let loss = if loss.is_nan() { f64::INFINITY } else { loss };
+            let loss = mse(&preds, &trues) + regularize(&individual.expr, 0.001);
             individual.loss = loss;
-        }
+        });
 
         population.sort_by(|a, b| a.loss.total_cmp(&b.loss));
         println!(
