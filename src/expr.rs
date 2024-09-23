@@ -29,8 +29,8 @@ pub struct BinOp {
 
     // pointres (via Vec index)
     // to child nodes
-    a: usize,
-    b: usize,
+    pub a: usize,
+    pub b: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -38,7 +38,7 @@ pub struct UnOp {
     pub op: UnaryOp,
     // pointer (via Vec index)
     // to child node.
-    a: usize,
+    pub a: usize,
 }
 
 #[derive(Debug, Clone)]

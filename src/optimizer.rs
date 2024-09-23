@@ -95,7 +95,7 @@ pub fn genetic_optimizer(
         e.expr.random_tree(0);
     }
 
-    for generation in 0..iterations {
+    for generation in 1..=iterations {
         population.par_iter_mut().progress().for_each(|individual| {
             let mut preds = Vec::new();
             let mut trues = Vec::new();
@@ -114,17 +114,20 @@ pub fn genetic_optimizer(
                 trues.push(y_row);
             }
 
-            let loss = mse(&preds, &trues) + regularize(&individual.expr, 0.001);
+            let loss = mse(&preds, &trues)/* + regularize(&individual.expr, 0.001)*/;
             individual.loss = loss;
         });
 
         population.sort_by(|a, b| a.loss.total_cmp(&b.loss));
         println!(
-            "Generation {}, best loss: {:0.4}, best expr: {}",
-            generation + 1,
+            "Generation {generation}, best loss: {:0.4}, best expr: {}",
             population[0].loss,
             population[0].expr.rpn(),
         );
+
+        if generation == iterations {
+            break;
+        }
         let mut new_population = Vec::new();
 
         let mut rng = rand::thread_rng();
@@ -141,5 +144,5 @@ pub fn genetic_optimizer(
         population = new_population;
     }
 
-    (0.0, Expr::new(cols))
+    (population[0].loss, population[0].expr.clone())
 }
