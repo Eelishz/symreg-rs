@@ -14,9 +14,6 @@ mod optimizer;
 mod vec2d;
 mod vm;
 
-#[global_allocator]
-static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
-
 fn main() {
     let data_loader = DataLoader::new("data/IRIS.csv").unwrap();
     let mut data = data_loader.vec2d();

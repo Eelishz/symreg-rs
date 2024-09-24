@@ -19,26 +19,48 @@ enum BuiltinFunction {
 
 #[derive(Debug, Clone)]
 enum Op {
+    // Push value onto the stack
     Push(Value),
-    Add,
-    Sub,
-    Mul,
-    Div,
-    Pow,
-    Neg,
+
+    // Binary operators. Take two values off the
+    // stack, operate on them and push the result.
+    Add, // Add
+    Sub, // Substract
+    Mul, // Multiply
+    Div, // Divide
+    Pow, // Power
+
+    // Unary operators. Operate on top
+    // of stack.
+    Neg, // Negate
+
+    // Stack operators.
+    Dup, // Duplicate top of stack
+
+    // Jump operators. Will consume top of
+    // stack. Contain index to jump table.
+    Jmp(usize), // Jump, uncoditional
+    Je(usize),  // Jump if top of stack is zero
+    Jne(usize), // Jump if top of stack not zero
+    Js(usize),  // Jump if top of stack negative
+    Jns(usize), // Jump if top of stack not negative
+    Label,      // Label for jumping
+
+    // Function call.
     Call(BuiltinFunction),
 }
 
 #[derive(Debug, Clone)]
 pub struct Program {
     ops: Vec<Op>,
+    jump_table: Vec<usize>,
 }
 
 impl Program {
     pub fn evaluate(&self, inputs: &[f64]) -> Option<f64> {
         let mut vm = VM {
             pc: 0,
-            stack: Vec::new(),
+            stack: Vec::with_capacity(20),
             memory: Vec::new(),
         };
 
@@ -84,6 +106,35 @@ impl Program {
                     let a = vm.stack.pop()?;
                     vm.stack.push(-a);
                 }
+                Op::Dup => {
+                    let a = vm.stack.pop()?;
+                    vm.stack.push(a);
+                    vm.stack.push(a);
+                }
+                Op::Jmp(label) => {
+                    vm.pc = self.jump_table[*label];
+                }
+                Op::Je(label) => {
+                    if vm.stack.pop()? == 0.0 {
+                        vm.pc = self.jump_table[*label];
+                    }
+                }
+                Op::Jne(label) => {
+                    if vm.stack.pop()? != 0.0 {
+                        vm.pc = self.jump_table[*label];
+                    }
+                }
+                Op::Js(label) => {
+                    if vm.stack.pop()? < 0.0 {
+                        vm.pc = self.jump_table[*label];
+                    }
+                }
+                Op::Jns(label) => {
+                    if vm.stack.pop()? >= 0.0 {
+                        vm.pc = self.jump_table[*label];
+                    }
+                }
+                Op::Label => (),
                 Op::Call(f) => match f {
                     BuiltinFunction::Abs => {
                         let a = vm.stack.pop()?;
@@ -124,26 +175,37 @@ impl Program {
     }
 
     pub fn pprint(&self) {
+        let mut label_counter = 0;
         for op in &self.ops {
             match op {
                 Op::Push(v) => match v {
                     Value::Literal(x) => println!("PUSH {x}"),
                     Value::Ptr(x) => println!("PUSH ${x}"),
                 },
-                Op::Add => println!("ADD"),
-                Op::Sub => println!("SUB"),
-                Op::Mul => println!("MUL"),
-                Op::Div => println!("DIV"),
-                Op::Pow => println!("POW"),
-                Op::Neg => println!("NEG"),
+                Op::Add => println!("    ADD"),
+                Op::Sub => println!("    SUB"),
+                Op::Mul => println!("    MUL"),
+                Op::Div => println!("    DIV"),
+                Op::Pow => println!("    POW"),
+                Op::Neg => println!("    NEG"),
+                Op::Dup => println!("    DUP"),
+                Op::Jmp(l) => println!("    JMP ${l}"),
+                Op::Je(l) => println!("    JE ${l}"),
+                Op::Jne(l) => println!("    JNE ${l}"),
+                Op::Js(l) => println!("    JS ${l}"),
+                Op::Jns(l) => println!("    JNS ${l}"),
+                Op::Label => {
+                    println!("LABEL {label_counter}:");
+                    label_counter += 1;
+                }
                 Op::Call(f) => match f {
-                    BuiltinFunction::Abs => println!("CALL $abs"),
-                    BuiltinFunction::Loge => println!("CALL $loge"),
-                    BuiltinFunction::Log2 => println!("CALL $log2"),
-                    BuiltinFunction::Log10 => println!("CALL $log10"),
-                    BuiltinFunction::Sin => println!("CALL $sin"),
-                    BuiltinFunction::Cos => println!("CALL $cos"),
-                    BuiltinFunction::Tan => println!("CALL $tan"),
+                    BuiltinFunction::Abs => println!("    CALL $abs"),
+                    BuiltinFunction::Loge => println!("    CALL $loge"),
+                    BuiltinFunction::Log2 => println!("    CALL $log2"),
+                    BuiltinFunction::Log10 => println!("    CALL $log10"),
+                    BuiltinFunction::Sin => println!("    CALL $sin"),
+                    BuiltinFunction::Cos => println!("    CALL $cos"),
+                    BuiltinFunction::Tan => println!("    CALL $tan"),
                 },
             }
         }
@@ -159,7 +221,8 @@ struct VM {
 pub fn compile_expr(expr: &Expr) -> Program {
     let mut ops = Vec::new();
     flatten_expr(&mut ops, expr, expr.root);
-    Program { ops }
+    let jump_table = Vec::new();
+    Program { ops, jump_table }
 }
 
 fn flatten_expr(buf: &mut Vec<Op>, expr: &Expr, node: usize) {
