@@ -6,6 +6,7 @@ use crate::{
     expr::Expr,
     metrics::{mse, regularize},
     vec2d::Vec2d,
+    vm::{compile_expr, Program},
 };
 
 pub fn naive_montecarlo(iterations: usize, x: Vec2d<f64>, y: Vec<f64>) -> (f64, Expr) {
@@ -72,6 +73,7 @@ impl GeneticParameters {
 #[derive(Debug, Clone)]
 struct Individual {
     expr: Expr,
+    compiled_expr: Program,
     loss: f64,
 }
 
@@ -82,18 +84,22 @@ pub fn genetic_optimizer(
     params: &GeneticParameters,
 ) -> (f64, Expr) {
     let (rows, cols) = x.shape();
-    let mut population = vec![
-        Individual {
-            expr: Expr::new(cols),
-            loss: f64::INFINITY
-        };
-        params.population_size
-    ];
+    let mut population = Vec::new();
+
+    for _ in 0..params.population_size {
+        let mut expr = Expr::new(cols);
+        expr.random_tree(10);
+        let compiled_expr = compile_expr(&expr);
+        let loss = f64::INFINITY;
+        population.push(Individual {
+            expr,
+            compiled_expr,
+            loss,
+        });
+    }
+
     let n_selected = (population.len() as f64 * params.cutoff) as usize;
     assert_ne!(n_selected, 0);
-    for e in &mut population {
-        e.expr.random_tree(0);
-    }
 
     for generation in 1..=iterations {
         population.par_iter_mut().progress().for_each(|individual| {
@@ -104,7 +110,8 @@ pub fn genetic_optimizer(
                 let x_row = x.get_row(i_row).unwrap();
                 let y_row = y[i_row];
 
-                let result = individual.expr.evaluate(x_row);
+                //let result = individual.expr.evaluate(x_row);
+                let result = individual.compiled_expr.evaluate(x_row).unwrap();
                 let result = if result.is_nan() {
                     f64::INFINITY
                 } else {
@@ -114,7 +121,7 @@ pub fn genetic_optimizer(
                 trues.push(y_row);
             }
 
-            let loss = mse(&preds, &trues)/* + regularize(&individual.expr, 0.001)*/;
+            let loss = mse(&preds, &trues) + regularize(&individual.expr, 0.001);
             individual.loss = loss;
         });
 
@@ -135,8 +142,10 @@ pub fn genetic_optimizer(
         for _i in 0..params.population_size {
             let random_individual = population[rng.gen_range(0..n_selected)].clone();
             let new_individual = random_individual.expr.mutate(params.mutation_rate);
+            let compiled_expr = compile_expr(&new_individual);
             new_population.push(Individual {
                 expr: new_individual,
+                compiled_expr,
                 loss: f64::INFINITY,
             });
         }

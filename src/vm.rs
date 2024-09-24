@@ -1,10 +1,12 @@
 use crate::expr::{BinaryOp, Expr, Node, UnaryOp};
 
+#[derive(Debug, Clone)]
 enum Value {
     Literal(f64),
     Ptr(usize),
 }
 
+#[derive(Debug, Clone)]
 enum BuiltinFunction {
     Abs,
     Loge,
@@ -15,6 +17,7 @@ enum BuiltinFunction {
     Tan,
 }
 
+#[derive(Debug, Clone)]
 enum Op {
     Push(Value),
     Add,
@@ -26,11 +29,100 @@ enum Op {
     Call(BuiltinFunction),
 }
 
+#[derive(Debug, Clone)]
 pub struct Program {
     ops: Vec<Op>,
 }
 
 impl Program {
+    pub fn evaluate(&self, inputs: &[f64]) -> Option<f64> {
+        let mut vm = VM {
+            pc: 0,
+            stack: Vec::new(),
+            memory: Vec::new(),
+        };
+
+        vm.memory.extend_from_slice(inputs);
+
+        loop {
+            if vm.pc >= self.ops.len() {
+                break;
+            }
+            let op = &self.ops[vm.pc];
+
+            match op {
+                Op::Push(v) => match v {
+                    Value::Literal(x) => vm.stack.push(*x),
+                    Value::Ptr(x) => vm.stack.push(vm.memory[*x]),
+                },
+                Op::Add => {
+                    let b = vm.stack.pop()?;
+                    let a = vm.stack.pop()?;
+                    vm.stack.push(a + b);
+                }
+                Op::Sub => {
+                    let b = vm.stack.pop()?;
+                    let a = vm.stack.pop()?;
+                    vm.stack.push(a - b);
+                }
+                Op::Mul => {
+                    let b = vm.stack.pop()?;
+                    let a = vm.stack.pop()?;
+                    vm.stack.push(a * b);
+                }
+                Op::Div => {
+                    let b = vm.stack.pop()?;
+                    let a = vm.stack.pop()?;
+                    vm.stack.push(a / b);
+                }
+                Op::Pow => {
+                    let b = vm.stack.pop()?;
+                    let a = vm.stack.pop()?;
+                    vm.stack.push(a.powf(b));
+                }
+                Op::Neg => {
+                    let a = vm.stack.pop()?;
+                    vm.stack.push(-a);
+                }
+                Op::Call(f) => match f {
+                    BuiltinFunction::Abs => {
+                        let a = vm.stack.pop()?;
+                        vm.stack.push(a.abs());
+                    }
+                    BuiltinFunction::Loge => {
+                        let a = vm.stack.pop()?;
+                        vm.stack.push(a.ln());
+                    }
+                    BuiltinFunction::Log2 => {
+                        let a = vm.stack.pop()?;
+                        vm.stack.push(a.log2());
+                    }
+                    BuiltinFunction::Log10 => {
+                        let a = vm.stack.pop()?;
+                        vm.stack.push(a.log10());
+                    }
+                    BuiltinFunction::Sin => {
+                        let a = vm.stack.pop()?;
+                        vm.stack.push(a.sin());
+                    }
+                    BuiltinFunction::Cos => {
+                        let a = vm.stack.pop()?;
+                        vm.stack.push(a.cos());
+                    }
+                    BuiltinFunction::Tan => {
+                        let a = vm.stack.pop()?;
+                        vm.stack.push(a.tan());
+                    }
+                },
+            }
+
+            vm.pc += 1;
+        }
+
+        assert_eq!(vm.stack.len(), 1);
+        vm.stack.pop()
+    }
+
     pub fn pprint(&self) {
         for op in &self.ops {
             match op {
@@ -59,6 +151,7 @@ impl Program {
 }
 
 struct VM {
+    pc: usize,
     stack: Vec<f64>,
     memory: Vec<f64>,
 }
@@ -134,5 +227,36 @@ fn flatten_expr(buf: &mut Vec<Op>, expr: &Expr, node: usize) {
                 buf.push(Op::Call(BuiltinFunction::Tan));
             }
         },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn compiler() {
+        let n_vars = 10;
+        for _ in 0..10_000 {
+            let vars: Vec<f64> = (0..n_vars).map(|_| rand::random::<f64>()).collect();
+            let mut expr = Expr::new(n_vars);
+            expr.random_tree(10);
+            let compiled_expr = compile_expr(&expr);
+
+            let expr_eval = expr.evaluate(&vars);
+            let vm_eval = compiled_expr
+                .evaluate(&vars)
+                .expect("program should be valid");
+
+            if expr_eval.is_nan() && vm_eval.is_nan() {
+                continue;
+            }
+
+            println!("--------------");
+            println!("{}", expr.rpn());
+            compiled_expr.pprint();
+
+            assert_eq!(expr_eval, vm_eval);
+        }
     }
 }
